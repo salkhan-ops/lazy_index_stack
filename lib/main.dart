@@ -1,115 +1,184 @@
 import 'package:flutter/material.dart';
 
-void main() {
+main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return const MaterialApp(
+      title: 'Lazy Indexed Stacked',
+      home: IndexStackExample(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
+class LazyStackIndex extends StatefulWidget {
+  const LazyStackIndex({
+    Key? key,
+    this.alignment = AlignmentDirectional.topStart,
+    this.textDirection,
+    this.sizing = StackFit.loose,
+    this.index = 0,
+    this.children = const <Widget>[],
+  }) : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  final AlignmentGeometry alignment;
+  final TextDirection? textDirection;
+  final StackFit sizing;
+  final List<Widget> children;
+  final int index;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<LazyStackIndex> createState() => _LazyStackIndexState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _LazyStackIndexState extends State<LazyStackIndex> {
+  late final List<bool> _activitatedList =
+      List<bool>.generate(widget.children.length, (int i) => i == widget.index);
 
-  void _incrementCounter() {
+  List<Widget> _buildChildren(BuildContext context) {
+    return List<Widget>.generate(widget.children.length, (int i) {
+      if (_activitatedList[i]) {
+        return widget.children[i];
+      }
+      return const SizedBox.shrink();
+    });
+  }
+
+  @override
+  void didUpdateWidget(LazyStackIndex oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.index != widget.index) {
+      _activateIndex(widget.index);
+    }
+  }
+
+  void _activateIndex(int? index) {
+    if (index == null) {
+      return;
+    }
+    if (!_activitatedList[index]) {
+      setState(() {
+        _activitatedList[index] = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IndexedStack(
+      alignment: widget.alignment,
+      textDirection: widget.textDirection,
+      sizing: widget.sizing,
+      index: widget.index,
+      children: widget.children,
+    );
+  }
+}
+
+class IndexStackExample extends StatefulWidget {
+  const IndexStackExample({Key? key}) : super(key: key);
+
+  @override
+  State<IndexStackExample> createState() => _IndexStackExampleState();
+}
+
+class _IndexStackExampleState extends State<IndexStackExample> {
+  int _index = 0;
+
+  void _selectIndex(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _index = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Indexed Stack'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Column(
+        children: [
+          Expanded(
+            child: LazyStackIndex(
+              index: _index,
+              children: List.generate(
+                3,
+                (int index) => _SubIndexPage(index),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+          ),
+          BottomNavigationBar(
+            currentIndex: _index,
+            onTap: _selectIndex,
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.filter_1),
+                label: '1',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.filter_2),
+                label: '2',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.filter_3),
+                label: '3',
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _SubIndexPage extends StatefulWidget {
+  const _SubIndexPage(this.index, {super.key});
+  final int index;
+  @override
+  State<_SubIndexPage> createState() => _SubIndexPageState();
+}
+
+class _SubIndexPageState extends State<_SubIndexPage> {
+  DateTime? _displayTime;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _displayTime = DateTime.now().subtract(
+            const Duration(milliseconds: 300),
+          );
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        const Spacer(),
+        Text(
+          'This is page ${widget.index}',
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontSize: 64,
+              ),
+          textAlign: TextAlign.center,
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        if (_displayTime == null)
+          const Spacer()
+        else
+          Expanded(child: Text('initState() ran at $_displayTime')),
+      ],
     );
   }
 }
